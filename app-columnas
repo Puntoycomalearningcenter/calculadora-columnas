@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Estructural Zapopan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .input-box {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            transition: border-color 0.3s;
+        }
+        .input-box:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+        .read-only-box {
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: 600;
+        }
+        .results-section {
+            border-left: 5px solid #3498db;
+            background-color: #ecf0f1;
+        }
+        .highlight {
+            font-size: 1.15rem;
+            border-top: 1px solid #ccc;
+        }
+        .container-app {
+            max-width: 550px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+<div class="container-app w-full bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+    <h1 class="text-2xl font-bold text-center text-gray-800 mb-6 border-b-2 border-indigo-500 pb-3">
+        🏛️ Cálculo Sísmico (Zapopan)
+    </h1>
+    <p class="text-sm text-center text-gray-500 mb-6">
+        Determina $V_o$, Momento y $S_{req}$ según el Reglamento y $Q$ del sistema.
+    </p>
+    
+    <!-- Sección de Datos de Entrada -->
+    <div class="space-y-4">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+                <label for="wo" class="text-sm font-medium text-gray-700">Carga Wo (kg):</label>
+                <input type="number" id="wo" placeholder="18740.69" value="18740.69" class="input-box w-full p-2.5 rounded-lg" oninput="calcular()">
+            </div>
+            <div class="space-y-1">
+                <label for="h" class="text-sm font-medium text-gray-700">Altura h (m):</label>
+                <input type="number" id="h" placeholder="6.0" value="6.0" step="0.1" class="input-box w-full p-2.5 rounded-lg" oninput="calcular()">
+            </div>
+        </div>
+
+        <!-- Grupo y Factor Q -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1">
+                <label for="grupo" class="text-sm font-medium text-gray-700">Grupo (Uso - Art. 73):</label>
+                <select id="grupo" class="input-box w-full p-2.5 rounded-lg appearance-none" onchange="actualizarGrupo()">
+                    <option value="A2" selected>A2 (Peligroso/Gas, +50%)</option>
+                    <option value="A1">A1 (Esencial/Bomberos, +50%)</option>
+                    <option value="A3">A3 (Estadio/Escuela, +30%)</option>
+                    <option value="B">B (Vivienda/Comercio, +0%)</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label for="q" class="text-sm font-medium text-gray-700">Factor Q (Tabla 6.1):</label>
+                <input type="number" id="q" placeholder="4.0 (SMRF)" value="4.0" step="0.1" class="input-box w-full p-2.5 rounded-lg" oninput="calcular()">
+            </div>
+        </div>
+        
+        <!-- Coeficientes y Esfuerzo -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="space-y-1">
+                <label for="coefBase" class="text-sm font-medium text-gray-700">Coef. Base ($c_b$):</label>
+                <input type="number" id="coefBase" value="0.36" class="read-only-box w-full p-2.5 rounded-lg" readonly>
+            </div>
+            <div class="space-y-1">
+                <label for="factorIncr" class="text-sm font-medium text-gray-700">Factor Incr. (1.0, 1.3, 1.5):</label>
+                <input type="number" id="factorIncr" value="1.5" class="read-only-box w-full p-2.5 rounded-lg" readonly>
+            </div>
+            <div class="space-y-1">
+                <label for="esfuerzo" class="text-sm font-medium text-gray-700">Esfuerzo Perm. ($\mathbf{F_b}$ kg/cm²):</label>
+                <input type="number" id="esfuerzo" value="1518" class="input-box w-full p-2.5 rounded-lg" oninput="calcular()">
+            </div>
+        </div>
+    </div>
+
+    <button class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150" onclick="calcular()">
+        📐 CALCULAR ESFUERZOS Y SECCIÓN
+    </button>
+
+    <!-- Sección de Resultados -->
+    <div class="results-section mt-6 p-5 rounded-lg space-y-3">
+        <h2 class="text-lg font-semibold text-gray-700 mb-3">Resultados del Diseño:</h2>
+
+        <div class="flex justify-between text-sm">
+            <span class="text-gray-600">Coeficiente Sísmico Ajustado (c):</span>
+            <span class="text-gray-900 font-bold" id="res_c">0.540</span>
+        </div>
+
+        <div class="flex justify-between text-base border-t pt-2 border-gray-300">
+            <span class="text-gray-800 font-semibold">Fuerza Lateral (Vo):</span>
+            <span class="text-red-600 font-extrabold" id="res_vo">2,530.00 kg</span>
+        </div>
+
+        <div class="flex justify-between text-base">
+            <span class="text-gray-800 font-semibold">Momento (M = Vo * h):</span>
+            <span class="text-red-600 font-extrabold" id="res_m">15,180.00 kg-m</span>
+        </div>
+
+        <div class="flex justify-between highlight pt-3">
+            <span class="text-gray-800 font-semibold">Módulo de Sección Requerido ($\mathbf{S_{req}}$):</span>
+            <span class="text-xl text-indigo-700 font-extrabold" id="res_s">1,000.00 cm³</span>
+        </div>
+    </div>
+
+    <div class="note">
+        Herramienta basada en la metodología de $\frac{c}{Q}W_o$ y $\frac{M \cdot 100}{F_b}$.
+    </div>
+</div>
+
+<script>
+    // Función para actualizar el Factor de Incremento según el Grupo (Artículo 111)
+    function actualizarGrupo() {
+        const grupo = document.getElementById('grupo').value;
+        const factorIncrInput = document.getElementById('factorIncr');
+        
+        let factor = 1.0;
+        
+        switch(grupo) {
+            case 'B': factor = 1.0; break;
+            case 'A3': factor = 1.3; break; // +30% (Escuelas, Estadios)
+            case 'A1': 
+            case 'A2': factor = 1.5; break; // +50% (Esenciales, Peligrosos)
+        }
+        
+        factorIncrInput.value = factor;
+        calcular(); // Recalcular automáticamente al cambiar grupo
+    }
+
+    // Función Principal de Cálculo
+    function calcular() {
+        // Obtener valores
+        const wo = parseFloat(document.getElementById('wo').value) || 0;
+        const h = parseFloat(document.getElementById('h').value) || 0;
+        const q = parseFloat(document.getElementById('q').value) || 1;
+        const coefBase = parseFloat(document.getElementById('coefBase').value) || 0;
+        const factorIncr = parseFloat(document.getElementById('factorIncr').value) || 1;
+        const esfuerzo = parseFloat(document.getElementById('esfuerzo').value) || 1;
+
+        // 1. Calcular Coeficiente Sísmico (c)
+        const c = coefBase * factorIncr;
+
+        // 2. Calcular Fuerza Lateral (Vo)
+        // Vo = (c / Q) * Wo
+        const vo = (q === 0 || q === null) ? 0 : (c / q) * wo; // Evitar división por cero
+
+        // 3. Calcular Momento (M)
+        // M = Vo * h
+        const m = vo * h;
+
+        // 4. Calcular Módulo de Sección (S)
+        // S = (M * 100) / Esfuerzo
+        const s = (esfuerzo === 0 || esfuerzo === null) ? 0 : (m * 100) / esfuerzo;
+        
+        // Formateador de números (separador de miles)
+        const formatter = new Intl.NumberFormat('es-MX', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        // Mostrar Resultados (formateados)
+        document.getElementById('res_c').innerText = c.toFixed(3);
+        document.getElementById('res_vo').innerText = formatter.format(vo) + " kg";
+        document.getElementById('res_m').innerText = formatter.format(m) + " kg-m";
+        document.getElementById('res_s').innerText = formatter.format(s) + " cm³";
+    }
+
+    // Ejecutar cálculo inicial al cargar la página
+    window.onload = calcular;
+</script>
+
+</body>
+</html>
